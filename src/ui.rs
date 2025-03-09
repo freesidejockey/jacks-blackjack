@@ -32,12 +32,14 @@ pub fn render_border(frame: &mut Frame, screen: Rect) {
 }
 
 pub fn render_title_block(frame: &mut Frame, rect: Rect) {
-    // Just a placeholder method, rendering may happen in a different
-    // Impl section
-    let title_paragraph = Paragraph::new(TITLE)
+    render_centered_text(frame, rect, TITLE);
+}
+
+pub fn render_centered_text(frame: &mut Frame, rect: Rect, text: &str) {
+    let paragraph = Paragraph::new(text)
         .alignment(Alignment::Center)
         .block(Block::default());
-    frame.render_widget(title_paragraph, rect)
+    frame.render_widget(paragraph, rect);
 }
 
 pub fn render_sub_title_block(frame: &mut Frame, rect: Rect) {

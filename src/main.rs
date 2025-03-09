@@ -2,6 +2,7 @@ mod app;
 mod menu;
 mod ui;
 mod model;
+mod about;
 mod constants;
 
 use crate::app::App;
@@ -13,6 +14,7 @@ use ratatui::crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlter
 use ratatui::{Terminal};
 use std::error::Error;
 use std::io;
+use crate::about::about_us_screen::AboutUsScreen;
 use crate::menu::menu_screen::MenuScreen;
 use crate::model::{Model, ModelResponse};
 
@@ -48,6 +50,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, _app: &mut App) -> io::Result
                 Ok(ModelResponse::Exit) => return Ok(()),
                 Ok(ModelResponse::NavToMainMenu) => {
                     screen = Box::new(MenuScreen::new());
+                    break;
+                }
+                Ok(ModelResponse::NavToAboutUs) => {
+                    screen = Box::new(AboutUsScreen::new());
                     break;
                 }
                 _ => break,
