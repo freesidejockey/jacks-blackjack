@@ -26,7 +26,6 @@ pub const ABOUT_US: &str = concat!(
 );
 
 pub const ABOUT_US_TEXT: &str = concat!(
-"\n\n",
 "                                 FREESIDE SOFTWARE                                 \n",
 "\n",
 "   Named after the orbital paradise from William Gibson's Neuromancer, Freeside    \n",
@@ -54,5 +53,5 @@ pub const ABOUT_US_TEXT: &str = concat!(
 "   terminal newbie, your perspective matters.                                      \n",
 "\n",
 "   Remember: in the spirit of Gibson's high-orbit playground, everyone's invited   \n",
-"   to help build this digital getaway--no creds required, just code and creativity. \n",
+"   to help build this digital getaway--no creds required, just code and creativity.\n",
 );

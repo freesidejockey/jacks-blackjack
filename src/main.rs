@@ -4,6 +4,7 @@ mod ui;
 mod model;
 mod about;
 mod constants;
+mod strategy_calculator;
 
 use crate::app::App;
 use color_eyre::Result;
@@ -17,6 +18,7 @@ use std::io;
 use crate::about::about_us_screen::AboutUsScreen;
 use crate::menu::menu_screen::MenuScreen;
 use crate::model::{Model, ModelResponse};
+use crate::strategy_calculator::strategy_calculator::StrategyCalculatorScreen;
 
 fn main() -> Result<(), Box<dyn Error>> {
     color_eyre::install()?;
@@ -50,6 +52,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, _app: &mut App) -> io::Result
                 Ok(ModelResponse::Exit) => return Ok(()),
                 Ok(ModelResponse::NavToMainMenu) => {
                     screen = Box::new(MenuScreen::new());
+                    break;
+                }
+                Ok(ModelResponse::NavToStrategyCalculator) => {
+                    screen = Box::new(StrategyCalculatorScreen::new());
                     break;
                 }
                 Ok(ModelResponse::NavToAboutUs) => {
