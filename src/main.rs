@@ -5,6 +5,7 @@ mod model;
 mod about;
 mod constants;
 mod strategy_calculator;
+mod logic;
 
 use crate::app::App;
 use color_eyre::Result;
@@ -18,7 +19,7 @@ use std::io;
 use crate::about::about_us_screen::AboutUsScreen;
 use crate::menu::menu_screen::MenuScreen;
 use crate::model::{Model, ModelResponse};
-use crate::strategy_calculator::strategy_calculator::StrategyCalculatorScreen;
+use crate::strategy_calculator::strategy_calculator_screen::StrategyCalculatorScreen;
 
 fn main() -> Result<(), Box<dyn Error>> {
     color_eyre::install()?;
