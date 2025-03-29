@@ -69,8 +69,14 @@ pub fn render_sub_title_block(frame: &mut Frame, rect: Rect) {
 }
 
 pub fn render_footer_spans(frame: &mut Frame, specific_spans: Vec<String>, rect: Rect) {
-    let mut spans = vec![" Q ".to_string(), " Quit ".to_string(),
-                         " M ".to_string(), " Menu ".to_string()];
+    let mut spans = vec![
+        " Q ".to_string(), " Quit ".to_string(),
+        " M ".to_string(), " Menu ".to_string(),
+        " J/↓ ".to_string(), " Down ".to_string(),
+        " K/↑ ".to_string(), " Down ".to_string(),
+        " H/→ ".to_string(), " Down ".to_string(),
+        " L/← ".to_string(), " Down ".to_string()
+    ];
 
     spans.extend(specific_spans);
 

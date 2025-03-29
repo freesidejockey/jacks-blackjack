@@ -8,7 +8,7 @@ use fakeit::name::first;
 use itertools::Itertools;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode};
-use ratatui::layout::{Alignment, Constraint, Layout, Margin, Rect};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Margin, Rect};
 use ratatui::prelude::{Line, Stylize};
 use ratatui::style::{Color, Style, Styled};
 use ratatui::widgets::{Block, Cell, Paragraph, Row, Table};
@@ -502,7 +502,15 @@ impl Model for StrategyCalculatorScreen {
 
         // Render Footer
         let footer_area = main_chunks[2];
-        render_footer_spans(frame, vec![], footer_area);
+
+        let footer_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(5),
+                Constraint::Min(20),
+            ])
+            .split(footer_area);
+        render_footer_spans(frame, vec![], footer_layout[1]);
     }
 }
 

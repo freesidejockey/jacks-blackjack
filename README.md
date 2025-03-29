@@ -12,10 +12,8 @@ Jack's Blackjack is a TUI (Terminal User Interface) application that helps users
 - Basic Strategy Trainer (Planned)
 - Standard Gameplay with rule selection (Planned)
 - Advantage Play Trainer (Future)
-- Web UI (Future)
-- IOS App (Future)
 - Comprehensive "Zero to Hero" tutorials (Future)
-- Account creation for cross-platform stats tracking (Future)
+- Web UI (Future)
 
 ## Installation
 
