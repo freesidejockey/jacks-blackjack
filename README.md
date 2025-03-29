@@ -8,12 +8,18 @@ Jack's Blackjack is a TUI (Terminal User Interface) application that helps users
 
 ## Roadmap
 
-- Basic Strategy Calculator (WIP)
-- Basic Strategy Trainer (Planned)
-- Standard Gameplay with rule selection (Planned)
-- Advantage Play Trainer (Future)
-- Comprehensive "Zero to Hero" tutorials (Future)
-- Web UI (Future)
+### ✅ Implemented
+- Basic Strategy Calculator
+
+### 🔜 In Progress / Planned
+- Basic Strategy Trainer
+- Standard Gameplay with rule selection
+
+### 🔮 Future Ideas
+- Advantage Play Trainer
+- Comprehensive "Zero to Hero" tutorials
+- Web UI
+
 
 ## Installation
 
@@ -25,7 +31,7 @@ Jack's Blackjack is a TUI (Terminal User Interface) application that helps users
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/jacks-blackjack.git
+git clone https://github.com/freesidejockey/jacks-blackjack.git
 cd jacks-blackjack
 
 # Build and run the application
@@ -62,3 +68,7 @@ cargo build --release
 ## Contribution
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Feedback & Issues
+
+Have a feature request or found a bug? Feel free to open an issue on [GitHub Issues](https://github.com/freesidejockey/jacks-blackjack/issues) or discuss it in the comments!
