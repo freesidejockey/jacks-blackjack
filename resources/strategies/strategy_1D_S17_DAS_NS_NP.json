@@ -1,6 +1,6 @@
 {
   "id": "827396a6-eaa0-4dc3-986b-926fa0fcf798",
-  "name": "Basic Strategy",
+  "name": "Strategy",
   "description": "Default Basic Strategy",
   "rules": {
     "decks": 1,
@@ -14,10 +14,10 @@
       { "total": 5, "actions": ["H", "H", "H", "H", "H", "H", "H", "H", "H", "H"] },
       { "total": 6, "actions": ["H", "H", "H", "H", "H", "H", "H", "H", "H", "H"] },
       { "total": 7, "actions": ["H", "H", "H", "H", "H", "H", "H", "H", "H", "H"] },
-      { "total": 8, "actions": ["H", "H", "H", "D", "D", "H", "H", "H", "H", "H"] },
-      { "total": 9, "actions": ["D", "D", "D", "D", "D", "H", "H", "H", "H", "H"] },
-      { "total": 10, "actions": ["D", "D", "D", "D", "D", "D", "D", "D", "H", "H"] },
-      { "total": 11, "actions": ["D", "D", "D", "D", "D", "D", "D", "D", "H", "H"] },
+      { "total": 8, "actions": ["H", "H", "H", "Dh", "Dh", "H", "H", "H", "H", "H"] },
+      { "total": 9, "actions": ["Dh", "Dh", "Dh", "Dh", "Dh", "H", "H", "H", "H", "H"] },
+      { "total": 10, "actions": ["Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "H", "H"] },
+      { "total": 11, "actions": ["Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "H", "H"] },
       { "total": 12, "actions": ["H", "H", "S", "S", "S", "H", "H", "H", "H", "H"] },
       { "total": 13, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "H", "H"] },
       { "total": 14, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "H", "H"] },
@@ -30,13 +30,13 @@
       { "total": 21, "actions": ["S", "S", "S", "S", "S", "S", "S", "S", "S", "S"] }
     ],
     "soft_hands": [
-      { "total": 13, "actions": ["H", "H", "D", "D", "D", "H", "H", "H", "H", "H"] },
-      { "total": 14, "actions": ["H", "H", "D", "D", "D", "H", "H", "H", "H", "H"] },
-      { "total": 15, "actions": ["H", "H", "D", "D", "D", "H", "H", "H", "H", "H"] },
-      { "total": 16, "actions": ["H", "H", "D", "D", "D", "H", "H", "H", "H", "H"] },
-      { "total": 17, "actions": ["D", "D", "D", "D", "D", "H", "H", "H", "H", "H"] },
-      { "total": 18, "actions": ["S", "D", "D", "D", "D", "S", "S", "H", "H", "S"] },
-      { "total": 19, "actions": ["S", "S", "S", "S", "D", "S", "S", "S", "S", "S"] },
+      { "total": 13, "actions": ["H", "H", "Dh", "Dh", "Dh", "H", "H", "H", "H", "H"] },
+      { "total": 14, "actions": ["H", "H", "Dh", "Dh", "Dh", "H", "H", "H", "H", "H"] },
+      { "total": 15, "actions": ["H", "H", "Dh", "Dh", "Dh", "H", "H", "H", "H", "H"] },
+      { "total": 16, "actions": ["H", "H", "Dh", "Dh", "Dh", "H", "H", "H", "H", "H"] },
+      { "total": 17, "actions": ["Dh", "Dh", "Dh", "Dh", "Dh", "H", "H", "H", "H", "H"] },
+      { "total": 18, "actions": ["S", "Ds", "Ds", "Ds", "Ds", "S", "S", "H", "H", "S"] },
+      { "total": 19, "actions": ["S", "S", "S", "S", "Ds", "S", "S", "S", "S", "S"] },
       { "total": 20, "actions": ["S", "S", "S", "S", "S", "S", "S", "S", "S", "S"] },
       { "total": 21, "actions": ["S", "S", "S", "S", "S", "S", "S", "S", "S", "S"] }
     ],
@@ -44,7 +44,7 @@
       { "pair": 2, "actions": ["P", "P", "P", "P", "P", "P", "H", "H", "H", "H"] },
       { "pair": 3, "actions": ["P", "P", "P", "P", "P", "P", "P", "H", "H", "H"] },
       { "pair": 4, "actions": ["H", "H", "P", "P", "P", "H", "H", "H", "H", "H"] },
-      { "pair": 5, "actions": ["D", "D", "D", "D", "D", "D", "D", "D", "H", "H"] },
+      { "pair": 5, "actions": ["Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "Dh", "H", "H"] },
       { "pair": 6, "actions": ["P", "P", "P", "P", "P", "P", "H", "H", "H", "H"] },
       { "pair": 7, "actions": ["P", "P", "P", "P", "P", "P", "P", "H", "S", "H"] },
       { "pair": 8, "actions": ["P", "P", "P", "P", "P", "P", "P", "P", "H", "H"] },
@@ -56,11 +56,8 @@
   "action_legend": {
     "H": "Hit",
     "S": "Stand",
-    "D": "Double if allowed, otherwise Hit",
     "P": "Split",
-    "Su": "Surrender if allowed, otherwise Hit",
-    "Ds": "Double if allowed, otherwise Stand",
-    "Ph": "Split if double after split allowed, otherwise Hit",
-    "Rh": "Surrender if allowed, otherwise Hit"
+    "Dh": "Double if allowed, else Hit",
+    "Ds": "Double if allowed, else Stand"
   }
 }

@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 use std::fs;
+use std::rc::Rc;
 use crate::model::{Model, ModelResponse};
-use crate::ui::{render_border, render_centered_text, MenuNavigation};
+use crate::ui::{create_common_layout, create_header_main_footer_layout, render_border, render_centered_text, render_footer_spans, split_content_horizontally, MenuNavigation};
 use color_eyre::owo_colors::OwoColorize;
+use fakeit::name::first;
 use itertools::Itertools;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Alignment, Constraint, Layout, Margin, Rect};
 use ratatui::prelude::{Line, Stylize};
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Style, Styled};
 use ratatui::widgets::{Block, Cell, Paragraph, Row, Table};
 use ratatui::Frame;
 use crate::logic::strategy_calculator_logic::{BlackjackStrategy, SurrenderRule};
@@ -58,10 +60,10 @@ pub struct StrategyCalculatorScreen {
 impl StrategyCalculatorScreen {
     pub fn new() -> Self {
         // Initialize with default game settings
-        let default_decks = 1;
+        let default_decks = 3;
         let default_dealer_stands_on_soft_17 = true;
         let default_double_after_split = true;
-        let default_surrender = SurrenderRule::NotAllowed;
+        let default_surrender = SurrenderRule::AnyUpcard;
         let default_dealer_peak = true;
 
         // Load all strategies from the strategies directory
@@ -84,8 +86,7 @@ impl StrategyCalculatorScreen {
                                 strategy_cache.insert(filename.to_string(), strategy);
                             },
                             Err(e) => {
-                                // Just print error and continue - don't want to crash the app
-                                eprintln!("Error loading strategy {}: {}", filename, e);
+                                panic!()
                             }
                         }
                     }
@@ -108,7 +109,7 @@ impl StrategyCalculatorScreen {
 
         Self {
             active_menu_index: 0,
-            number_of_decks: default_decks,
+            number_of_decks: default_decks as i8,
             dealer_stands_on_soft_17: default_dealer_stands_on_soft_17,
             allow_double_after_split: default_double_after_split,
             surrender_rule: default_surrender,
@@ -119,10 +120,35 @@ impl StrategyCalculatorScreen {
         }
     }
 
+    fn get_action_color(&self, action: &str) -> Color {
+        match action.trim() {
+            "H" => Color::Red,
+            "D" | "Dh" => Color::Blue,
+            "Ds" => Color::LightBlue,
+            "S" => Color::Yellow,
+            "P" => Color::LightCyan,
+            "Su" | "Rs" | "Rp" => Color::LightMagenta,
+            "Rh" => Color::Magenta,
+             _ => Color::Red
+        }
+    }
+
+    fn create_colored_row<'a>(&self, row_data: Vec<String>) -> Row<'a> {
+        let first_cell = Cell::new(row_data[0].clone());
+
+        let mut cells = vec![first_cell];
+        for action in row_data.iter().skip(1) {
+            let color = self.get_action_color(action);
+            cells.push(Cell::new(action.clone()).style(Style::new().fg(color)));
+        }
+
+        Row::new(cells)
+    }
+
     // Static method that doesn't require &self
     pub fn find_matching_strategy(
         strategy_cache: &HashMap<String, BlackjackStrategy>,
-        decks: i8,
+        decks: u8,
         dealer_stands_on_soft_17: bool,
         double_after_split: bool,
         dealer_peak: bool,
@@ -131,7 +157,7 @@ impl StrategyCalculatorScreen {
         // Iterate through all cached strategies
         for (name, strategy) in strategy_cache {
             // Check for exact match on all variables
-            if strategy.rules.decks == decks as u8 &&
+            if strategy.rules.decks == decks &&
                 strategy.rules.dealer_stands_on_soft_17 == dealer_stands_on_soft_17 &&
                 strategy.rules.double_after_split == double_after_split &&
                 strategy.rules.dealer_peak == dealer_peak &&
@@ -139,31 +165,6 @@ impl StrategyCalculatorScreen {
 
                 // Return the name and reference to the matching strategy
                 return Some((name.clone(), strategy));
-            }
-        }
-
-        // No exact match found
-        None
-    }
-
-    pub fn find_exact_matching_strategy(&self,
-                                        decks: u8,
-                                        dealer_stands_on_soft_17: bool,
-                                        double_after_split: bool,
-                                        dealer_peak: bool,
-                                        surrender_rule: SurrenderRule) -> Option<String> {
-
-        // Iterate through all cached strategies
-        for (name, strategy) in &self.strategy_cache {
-            // Check for exact match on all variables
-            if strategy.rules.decks == decks &&
-                strategy.rules.dealer_stands_on_soft_17 == dealer_stands_on_soft_17 &&
-                strategy.rules.double_after_split == double_after_split &&
-                strategy.rules.dealer_peak == dealer_peak &&
-                strategy.rules.surrender_allowed == surrender_rule {
-
-                // Return the name of the matching strategy
-                return Some(name.clone());
             }
         }
 
@@ -213,7 +214,8 @@ impl StrategyCalculatorScreen {
         let surrender_allowed =self.surrender_rule;
 
         // Find an exact matching strategy
-        if let Some(matching_strategy) = self.find_exact_matching_strategy(
+        if let Some((name, matching_strategy)) = Self::find_matching_strategy(
+            &self.strategy_cache,
             decks,
             dealer_stands_on_soft_17,
             double_after_split,
@@ -221,12 +223,10 @@ impl StrategyCalculatorScreen {
             surrender_allowed
         ) {
             // Update the active strategy if we found a match
-            self.switch_strategy(&matching_strategy);
+            self.switch_strategy(&*name);
         } else {
-            // No exact match found - use a default or notify the user
-            // For now, let's use "random-strategy" as a fallback
-            if self.strategy_cache.contains_key("random-strategy") {
-                self.switch_strategy("random-strategy");
+            if self.strategy_cache.contains_key("default-strategy.json") {
+                self.switch_strategy("default-strategy");
             }
 
             // You might want to log this missing combination for future strategy creation:
@@ -237,9 +237,6 @@ impl StrategyCalculatorScreen {
                 dealer_peak,
                 surrender_allowed
             );
-
-            // Disabling logging as it logs into the UI
-            // eprintln!("No strategy found for combination: {}", key);
         }
     }
 
@@ -257,7 +254,12 @@ impl StrategyCalculatorScreen {
             text.push_str(item.to_string().as_str());
 
             match i {
-                0 => text.push_str(&format!(": < {} >", self.number_of_decks)),
+                0 => text.push_str(&format!(": < {} >", match self.number_of_decks {
+                    1 => "1",
+                    2 => "2",
+                    3 => "4+",
+                    _ => "Unknown"
+                })),
                 1 => text.push_str(&format!(": < {} >", if self.dealer_stands_on_soft_17 { "Dealer Stands" } else { "Dealer Hits" })),
                 2 => text.push_str(&format!(": < {} >", if self.allow_double_after_split { "Allowed" } else { "Not Allowed" })),
                 3 => text.push_str(&format!(": < {} >", self.surrender_rule.to_string())),
@@ -280,42 +282,78 @@ impl StrategyCalculatorScreen {
         frame.render_widget(menu_options, rect);
     }
 
+
+    fn render_action_legend(&self, frame: &mut Frame, rect: Rect) {
+        let mut strat_key_lines: Vec<Line<'_>> = vec![];
+
+        let main = rect.inner(Margin {
+            vertical: 0,
+            horizontal: (rect.width.saturating_sub(40) / 2)
+        });
+
+        let vert_split = Layout::vertical([
+            Constraint::Length(2),
+            Constraint::Min(10)
+        ]).split(main);
+
+        // Render key header
+        let header_sect = vert_split[0];
+        let header = Paragraph::new("Action Legend")
+            .bold()
+            .alignment(Alignment::Center)
+            .block(Block::default());
+
+        frame.render_widget(header, header_sect);
+
+        // Render key body
+        let body_sect = vert_split[1];
+
+        // Create a sorted collection of the action legend items
+        // First, collect into a Vec to allow sorting
+        let mut sorted_legend: Vec<(&String, &String)> = self.strategy.action_legend.iter().collect();
+
+        // Sort by the action code alphabetically
+        sorted_legend.sort_by(|a, b| a.0.cmp(b.0));
+
+        // Now create the styled lines in alphabetical order
+        for (code, description) in sorted_legend {
+            strat_key_lines.push(
+                Line::from(
+                    format!("{}: {}", code, description)).fg(self.get_action_color(code)));
+        }
+
+        // Render
+        let key = Paragraph::new(strat_key_lines)
+            .bold()
+            .alignment(Alignment::Left)
+            .block(Block::default());
+        frame.render_widget(key, body_sect);
+    }
+
     fn increment_current_menu_item(&mut self, increment: i8) {
-        let mut hm_one = HashMap::new();
-        hm_one.insert(1, SurrenderRule::NotAllowed);
-        hm_one.insert(2, SurrenderRule::AnyUpcard);
-        hm_one.insert(3, SurrenderRule::Dealer2Through10);
-
-        let mut hm_two = HashMap::new();
-        hm_two.insert(SurrenderRule::NotAllowed, 1);
-        hm_two.insert(SurrenderRule::AnyUpcard, 2);
-        hm_two.insert(SurrenderRule::Dealer2Through10, 3);
-
         let menu_item = ADJUSTABLE_OPTIONS.get(self.active_menu_index as usize).unwrap();
         match menu_item {
             AdjustableOption::NumberOfDecks => {
-                if increment < 0 && self.number_of_decks <= 1 {
-                    return;
-                }
-                if increment > 0 && self.number_of_decks >= 6 {
-                    return;
-                }
-                self.number_of_decks += increment;
+                // Bound the deck count between 1 and 6
+                self.number_of_decks = (self.number_of_decks + increment).clamp(1, 3);
             }
             AdjustableOption::Soft17DealerAction => {
+                // Simple boolean toggle
                 self.dealer_stands_on_soft_17 = !self.dealer_stands_on_soft_17;
             }
             AdjustableOption::AllowDoubleAfterSplit => {
+                // Simple boolean toggle
                 self.allow_double_after_split = !self.allow_double_after_split;
             }
             AdjustableOption::AllowSurrender => {
-                let curr_idx = hm_two.get(&self.surrender_rule).unwrap();
-                if *curr_idx == 1i8 && increment < 0 {
-                    self.surrender_rule = hm_one.get(&(3)).unwrap().clone();
-                } else if *curr_idx == 3i8 && increment > 0 {
-                    self.surrender_rule = hm_one.get(&(1)).unwrap().clone();
-                } else {
-                    self.surrender_rule = hm_one.get(&(curr_idx + increment)).unwrap().clone();
+                // Cycle through surrender rules and increment combo
+                self.surrender_rule = match (self.surrender_rule, increment > 0) {
+                    (SurrenderRule::NotAllowed, true) => SurrenderRule::AnyUpcard,
+                    (SurrenderRule::AnyUpcard, true) => SurrenderRule::Dealer2Through10,
+                    (SurrenderRule::Dealer2Through10, true) => SurrenderRule::NotAllowed,
+                    (SurrenderRule::Dealer2Through10, false) => SurrenderRule::AnyUpcard,
+                    (SurrenderRule::AnyUpcard, false) => SurrenderRule::NotAllowed,
+                    (SurrenderRule::NotAllowed, false) => SurrenderRule::Dealer2Through10,
                 }
             }
             AdjustableOption::DealerPeak => {
@@ -324,225 +362,58 @@ impl StrategyCalculatorScreen {
         }
     }
 
-    pub fn render_table(&mut self, frame: &mut Frame, rect: Rect, title: &str) {
-        // First, create an inner area with some margins to center the table
-        let inner_rect = rect.inner(Margin {
-            vertical: 0,                               // Keep vertical space the same
-            horizontal: rect.width.saturating_sub(26) / 2  // Center horizontally (table width is ~26)
-        });
-
-        let rows = [
-            Row::new(vec!["5", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["6", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["7", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["8", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["9", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["10", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["11", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["12", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["13", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["14", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["15", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["16", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["17", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["18", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["19", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["20", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-            Row::new(vec!["21", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H"]),
-        ];
-        let widths = [
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-        ];
-
-        let header_cells = vec![" ", "2", "3", "4", "5", "6", "7", "8", "9", "10", "A"]
-            .into_iter()
-            .map(|h| {
-                Cell::new(h)
-                    .style(Style::new().bold())
-            })
-            .collect::<Vec<_>>();
-
-        let header = Row::new(header_cells)
-            .style(Style::new().bold())
-            .bottom_margin(1)
-            .top_margin(1);
-
-        let table = Table::new(rows, widths)
-            // .column_spacing(1)
-            .style(Style::new().blue())
-            .header(header)
-            .block(Block::new().title(title).style(Style::new().bold()).title_alignment(Alignment::Center))
-            .row_highlight_style(Style::new().reversed())
-            .column_highlight_style(Style::new().red())
-            .cell_highlight_style(Style::new().blue())
-            .highlight_symbol(">>");
-
-        frame.render_widget(table, inner_rect);
-    }
-
+    // Modified table rendering methods
     pub fn render_hard_hands_table(&mut self, frame: &mut Frame, rect: Rect) {
-        // Create rows from hard hands data in the strategy
+        // Create rows from hard hands data with conditional coloring
         let rows = self.strategy.tables.hard_hands.iter().map(|row| {
-            // Convert total to string for the first column
-            let total_str = row.total.to_string();
-
-            // Create a vector with the total as the first element
-            let mut row_cells = vec![total_str];
-
-            // Add all action codes from the row
+            let mut row_cells = vec![row.total.to_string()];
             row_cells.extend(row.actions.iter().cloned());
-
-            // Create a Row with all cells
-            Row::new(row_cells)
+            self.create_colored_row(row_cells)
         }).collect::<Vec<_>>();
 
-        // Define column widths - one for the hand total, and one for each dealer card
-        let mut widths = vec![Constraint::Length(2)]; // Width for hand total column
-        widths.extend(vec![Constraint::Length(2); 10]); // Width for dealer card columns (2-A)
+        // Create a table with consistent styling
+        let widths = self.create_table_column_constraints(3);
+        let table = self.create_strategy_table(rows, widths, "Hard Hands");
 
-        // Create header cells
-        let header_cells = vec![" ", "2", "3", "4", "5", "6", "7", "8", "9", "10", "A"]
-            .into_iter()
-            .map(|h| Cell::new(h).style(Style::new().bold()))
-            .collect::<Vec<_>>();
-
-        let header = Row::new(header_cells)
-            .style(Style::new().bold())
-            .bottom_margin(1)
-            .top_margin(1);
-
-        // Create inner area with margins to center the table
-        let inner_rect = rect.inner(Margin {
-            vertical: 0,
-            horizontal: rect.width.saturating_sub(26) / 2
-        });
-
-        let table = Table::new(rows, widths)
-            .style(Style::new().blue())
-            .header(header)
-            .block(Block::new()
-                .title("Hard Hands")
-                .style(Style::new().bold())
-                .title_alignment(Alignment::Center))
-            .row_highlight_style(Style::new().reversed())
-            .column_highlight_style(Style::new().red())
-            .cell_highlight_style(Style::new().blue())
-            .highlight_symbol(">>");
-
+        // Render in a centered area
+        let inner_rect = self.create_centered_table_area(rect, 26);
         frame.render_widget(table, inner_rect);
     }
 
     pub fn render_soft_hands_table(&mut self, frame: &mut Frame, rect: Rect) {
-        // Create rows from soft hands data in the strategy
+        // Create rows from soft hands data
         let rows = self.strategy.tables.soft_hands.iter().map(|row| {
-            // For soft hands, we want to show "A+X" format instead of just the total
-            // The soft hand total is always Ace (11) + some value, so we can extract that value
             let second_card = row.total - 11;
             let hand_display = format!("A{}", second_card);
 
-            // Create a vector with the formatted hand as the first element
             let mut row_cells = vec![hand_display];
-
-            // Add all action codes from the row
             row_cells.extend(row.actions.iter().cloned());
-
-            // Create a Row with all cells
-            Row::new(row_cells)
+            self.create_colored_row(row_cells)
         }).collect::<Vec<_>>();
 
-        // Rest of the method remains the same...
-        let mut widths = vec![Constraint::Length(3)]; // Increased width for "A+X" format
-        widths.extend(vec![Constraint::Length(2); 10]);
+        // Create a table with consistent styling
+        let widths = self.create_table_column_constraints(3); // Wider first column for A+X format
+        let table = self.create_strategy_table(rows, widths, "Soft Hands");
 
-        let header_cells = vec![" ", "2", "3", "4", "5", "6", "7", "8", "9", "10", "A"]
-            .into_iter()
-            .map(|h| Cell::new(h).style(Style::new().bold()))
-            .collect::<Vec<_>>();
-
-        let header = Row::new(header_cells)
-            .style(Style::new().bold())
-            .bottom_margin(1)
-            .top_margin(1);
-
-        let inner_rect = rect.inner(Margin {
-            vertical: 0,
-            horizontal: rect.width.saturating_sub(27) / 2 // Adjusted for wider first column
-        });
-
-        let table = Table::new(rows, widths)
-            .style(Style::new().blue())
-            .header(header)
-            .block(Block::new()
-                .title("Soft Hands")
-                .style(Style::new().bold())
-                .title_alignment(Alignment::Center))
-            .row_highlight_style(Style::new().reversed())
-            .column_highlight_style(Style::new().red())
-            .cell_highlight_style(Style::new().blue())
-            .highlight_symbol(">>");
-
+        // Render in a centered area
+        let inner_rect = self.create_centered_table_area(rect, 27); // 27 for wider first column
         frame.render_widget(table, inner_rect);
     }
 
     pub fn render_pair_hands_table(&mut self, frame: &mut Frame, rect: Rect) {
-        // Create rows from pair hands data in the strategy
+        // Create rows from pair hands data
         let rows = self.strategy.tables.pair_hands.iter().map(|row| {
-            // Convert pair value to string for the first column
-            let pair_str = row.pair.to_string();
-
-            // Create a vector with the pair value as the first element
-            let mut row_cells = vec![pair_str];
-
-            // Add all action codes from the row
+            let mut row_cells = vec![row.pair.to_string()];
             row_cells.extend(row.actions.iter().cloned());
-
-            // Create a Row with all cells
-            Row::new(row_cells)
+            self.create_colored_row(row_cells)
         }).collect::<Vec<_>>();
 
-        // Define column widths - one for the pair value, and one for each dealer card
-        let mut widths = vec![Constraint::Length(2)]; // Width for pair value column
-        widths.extend(vec![Constraint::Length(2); 10]); // Width for dealer card columns (2-A)
+        // Create a table with consistent styling
+        let widths = self.create_table_column_constraints(3);
+        let table = self.create_strategy_table(rows, widths, "Pairs");
 
-        // Create header cells
-        let header_cells = vec![" ", "2", "3", "4", "5", "6", "7", "8", "9", "10", "A"]
-            .into_iter()
-            .map(|h| Cell::new(h).style(Style::new().bold()))
-            .collect::<Vec<_>>();
-
-        let header = Row::new(header_cells)
-            .style(Style::new().bold())
-            .bottom_margin(1)
-            .top_margin(1);
-
-        // Create inner area with margins to center the table
-        let inner_rect = rect.inner(Margin {
-            vertical: 0,
-            horizontal: rect.width.saturating_sub(26) / 2
-        });
-
-        let table = Table::new(rows, widths)
-            .style(Style::new().blue())
-            .header(header)
-            .block(Block::new()
-                .title("Pairs")
-                .style(Style::new().bold())
-                .title_alignment(Alignment::Center))
-            .row_highlight_style(Style::new().reversed())
-            .column_highlight_style(Style::new().red())
-            .cell_highlight_style(Style::new().blue())
-            .highlight_symbol(">>");
-
+        // Render in a centered area
+        let inner_rect = self.create_centered_table_area(rect, 26);
         frame.render_widget(table, inner_rect);
     }
 }
@@ -587,46 +458,34 @@ impl Model for StrategyCalculatorScreen {
     }
 
     fn ui(&mut self, frame: &mut Frame) {
-        // First split the screen vertically to create a footer area
-        let vertical = Layout::vertical([
-            Constraint::Length(4),     // Buffer area,
-            Constraint::Min(5),        // Main content area
-            Constraint::Length(4)      // Footer area
-        ]);
-        let main_chunks = vertical.split(frame.area());
+        // Create main vertical layout
+        let main_chunks = create_common_layout(frame.area());
         let main_area = main_chunks[1];
-        let footer_area = main_chunks[2];
 
         // Now split the main area horizontally into two sections (1/4 and 3/4)
-        let horizontal_layout = Layout::horizontal([
-            Constraint::Ratio(1, 4),  // Takes up 1/4 of the width (left side)
-            Constraint::Ratio(3, 4),  // Takes up 3/4 of the width (right side)
-        ]);
-        let horiz_chunks = horizontal_layout.split(main_area);
+        let horizontal_chunks = split_content_horizontally(main_area);
 
-        // Left section (1/4 of width)
-        let left_section = horiz_chunks[0];
+        // Render the settings Section
+        let left_section = horizontal_chunks[0];
         render_border(frame, left_section);
-        render_centered_text(frame, left_section, "Game Settings");
+        render_centered_text(frame, left_section, " Game Settings ");
 
-        let right_section = horiz_chunks[1];
+
+        let left_section_chunks = Self::create_header_main_main_footer_layout(left_section, 10, 20, 10);
+        let menu_rect = left_section_chunks[1];
+        let strategy_key_rect = left_section_chunks[3];
+
+
+        self.render_menu_body(frame, menu_rect);
+        self.render_action_legend(frame, strategy_key_rect);
+
+        // Render the Strategy Tables
+        let right_section = horizontal_chunks[1];
         render_border(frame, right_section);
-        render_centered_text(frame, right_section, "Strategy Chart");
+        render_centered_text(frame, right_section, " Strategy Chart ");
 
-        let left_vert_layout = Layout::vertical([
-            Constraint::Length(10),
-            Constraint::Min(10),
-            Constraint::Length(10),
-        ]);
-        let left_vert_chunks = left_vert_layout.split(left_section);
-
-        // Split the right section (3/4 of width) into 3 vertical and 5 horizontal slices
-        let right_vert_layout = Layout::vertical([
-            Constraint::Length(10),
-            Constraint::Min(21),
-            Constraint::Length(10),
-        ]);
-        let right_vert_chunks = right_vert_layout.split(right_section);
+        let tables_rect =
+            create_header_main_footer_layout(right_section, 10, 21, 10)[1];
 
         let right_layout = Layout::horizontal([
             Constraint::Length(4),         // Small buffer space
@@ -635,12 +494,15 @@ impl Model for StrategyCalculatorScreen {
             Constraint::Ratio(1, 3),       // Equal chunk 3
             Constraint::Length(4),         // Small buffer space
         ]);
-        let right_chunks = right_layout.split(right_vert_chunks[1]);
+        let right_chunks = right_layout.split(tables_rect);
 
-        self.render_menu_body(frame, left_vert_chunks[1]);
         self.render_hard_hands_table(frame, right_chunks[1]);
         self.render_soft_hands_table(frame, right_chunks[2]);
         self.render_pair_hands_table(frame, right_chunks[3]);
+
+        // Render Footer
+        let footer_area = main_chunks[2];
+        render_footer_spans(frame, vec![], footer_area);
     }
 }
 
@@ -658,40 +520,69 @@ impl MenuNavigation for StrategyCalculatorScreen {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl StrategyCalculatorScreen {
+    // New helper methods for table styling
 
-    #[test]
-    fn test_create_strategy_key() {
-        // Test case 1: All options enabled
-        let key1 = StrategyCalculatorScreen::create_strategy_key(
-            2, true, true, true, SurrenderRule::NotAllowed
-        );
-        assert_eq!(key1, "decks2_s17y_dasy_peaky_surry");
+    /// Creates a consistently styled header row for strategy tables
+    fn create_table_header(&self) -> Row<'static> {
+        let header_cells = vec![" ", "2", "3", "4", "5", "6", "7", "8", "9", "10", "A"]
+            .into_iter()
+            .map(|h| Cell::new(h).style(Style::new().bold()))
+            .collect::<Vec<_>>();
 
-        // Test case 2: All options disabled
-        let key2 = StrategyCalculatorScreen::create_strategy_key(
-            1, false, false, false, SurrenderRule::NotAllowed
-        );
-        assert_eq!(key2, "decks1_s17n_dasn_peakn_surrn");
+        Row::new(header_cells)
+            .style(Style::new().bold())
+            .bottom_margin(1)
+            .top_margin(1)
+    }
 
-        // Test case 3: Mixed options
-        let key3 = StrategyCalculatorScreen::create_strategy_key(
-            6, true, false, true, SurrenderRule::NotAllowed
-        );
-        assert_eq!(key3, "decks6_s17y_dasn_peaky_surry");
+    /// Creates column constraints for strategy tables
+    /// first_col_width: width for the first column (hand description)
+    fn create_table_column_constraints(&self, first_col_width: u16) -> Vec<Constraint> {
+        let mut constraints = vec![Constraint::Length(first_col_width)]; // First column (hand type)
+        constraints.extend(vec![Constraint::Length(2); 10]);
+        constraints
+    }
 
-        // Test case 4: Different deck counts
-        let key4 = StrategyCalculatorScreen::create_strategy_key(
-            4, false, true, false, SurrenderRule::NotAllowed
-        );
-        assert_eq!(key4, "decks4_s17n_dasy_peakn_surrn");
+    /// Creates a styled table with the standard layout and styling
+    fn create_strategy_table<'a>(
+        &self,
+        rows: Vec<Row<'a>>,
+        widths: Vec<Constraint>,
+        title: &'a str
+    ) -> Table<'a> {
+        Table::new(rows, widths)
+            .style(Style::new().blue())
+            .header(self.create_table_header())
+            .block(Block::new()
+                .title(title)
+                .style(Style::new().bold())
+                .title_alignment(Alignment::Center))
+            .row_highlight_style(Style::new().reversed())
+            .column_spacing(1)
+            .column_highlight_style(Style::new().red())
+            .cell_highlight_style(Style::new().blue())
+            .highlight_symbol(">>")
+    }
 
-        // Test case 5: Different surrender types
-        let key5 = StrategyCalculatorScreen::create_strategy_key(
-            1, true, true, true, SurrenderRule::NotAllowed
-        );
-        assert_eq!(key5, "decks1_s17y_dasy_peaky_surry");
+    /// Creates a centered inner area for a table with appropriate margins
+    fn create_centered_table_area(&self, rect: Rect, table_width: u16) -> Rect {
+        rect.inner(Margin {
+            vertical: 0,
+            horizontal: (rect.width.saturating_sub(table_width) / 2).saturating_sub(5)
+        })
+    }
+
+    pub fn create_header_main_main_footer_layout(area: Rect,
+                                            header_height: u16,
+                                            main_height: u16,
+                                            footer_height: u16) -> Rc<[Rect]> {
+        Layout::vertical([
+            Constraint::Length(header_height),
+            Constraint::Min(main_height/2),
+            Constraint::Length(2),
+            Constraint::Min(main_height/2),
+            Constraint::Length(footer_height),
+        ]).split(area)
     }
 }

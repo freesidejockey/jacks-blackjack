@@ -6,7 +6,7 @@
     "decks": 1,
     "dealer_stands_on_soft_17": true,
     "double_after_split": true,
-    "surrender_allowed": "Any Dealer Upcard",
+    "surrender_allowed": "Dealer 2 through 10",
     "dealer_peak": true
   },
   "tables": {
@@ -22,7 +22,7 @@
       { "total": 13, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "H", "H"] },
       { "total": 14, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "H", "H"] },
       { "total": 15, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "H", "H"] },
-      { "total": 16, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "Rh", "Rh"] },
+      { "total": 16, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "Rh", "H"] },
       { "total": 17, "actions": ["S", "S", "S", "S", "S", "S", "S", "S", "S", "S"] },
       { "total": 18, "actions": ["S", "S", "S", "S", "S", "S", "S", "S", "S", "S"] },
       { "total": 19, "actions": ["S", "S", "S", "S", "S", "S", "S", "S", "S", "S"] },

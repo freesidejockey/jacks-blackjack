@@ -3,7 +3,7 @@
   "name": "Basic Strategy",
   "description": "Default Basic Strategy",
   "rules": {
-    "decks": 2,
+    "decks": 1,
     "dealer_stands_on_soft_17": false,
     "double_after_split": false,
     "dealer_peak": false,
