@@ -300,8 +300,16 @@ impl StrategyCalculatorScreen {
         let menu_item = ADJUSTABLE_OPTIONS.get(self.active_menu_index as usize).unwrap();
         match menu_item {
             AdjustableOption::NumberOfDecks => {
-                // Bound the deck count between 1 and 6
-                self.number_of_decks = (self.number_of_decks + increment).clamp(1, 3);
+                // Boundaries for wrapping
+                let min_value = 1;
+                let max_value = 3;
+
+                // Convert to `isize` for safe handling of negatives
+                let new_value = (self.number_of_decks as isize + increment as isize - min_value)
+                    .rem_euclid(max_value - min_value + 1)
+                    + min_value;
+
+                self.number_of_decks = new_value as i8;
             }
             AdjustableOption::Soft17DealerAction => {
                 // Simple boolean toggle
