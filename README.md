@@ -2,6 +2,8 @@
 
 A terminal-based blackjack strategy trainer built with Rust and Ratatui.
 
+![Image](https://github.com/user-attachments/assets/b88ef289-a256-49ed-bff1-55aa515ba13e)
+
 ## Overview
 
 Jack's Blackjack is a TUI (Terminal User Interface) application that helps users learn and practice blackjack basic strategy. Future versions will include card counting training features.
