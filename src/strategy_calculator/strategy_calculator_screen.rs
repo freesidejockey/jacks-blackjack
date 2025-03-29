@@ -1,19 +1,16 @@
-use std::collections::HashMap;
-use std::fs;
-use std::rc::Rc;
+use crate::logic::strategy_calculator_logic::{BlackjackStrategy, SurrenderRule};
 use crate::model::{Model, ModelResponse};
 use crate::ui::{create_common_layout, create_header_main_footer_layout, render_border, render_centered_text, render_footer_spans, split_content_horizontally, MenuNavigation};
-use color_eyre::owo_colors::OwoColorize;
-use fakeit::name::first;
-use itertools::Itertools;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Margin, Rect};
 use ratatui::prelude::{Line, Stylize};
-use ratatui::style::{Color, Style, Styled};
+use ratatui::style::{Color, Style};
 use ratatui::widgets::{Block, Cell, Paragraph, Row, Table};
 use ratatui::Frame;
-use crate::logic::strategy_calculator_logic::{BlackjackStrategy, SurrenderRule};
+use std::collections::HashMap;
+use std::fs;
+use std::rc::Rc;
 
 // ---- Adjustable Settings ----
 enum AdjustableOption {
@@ -85,7 +82,7 @@ impl StrategyCalculatorScreen {
                                 // Cache the strategy
                                 strategy_cache.insert(filename.to_string(), strategy);
                             },
-                            Err(e) => {
+                            Err(_) => {
                                 panic!()
                             }
                         }
@@ -183,28 +180,6 @@ impl StrategyCalculatorScreen {
         }
     }
 
-    // Add a method to get strategy names
-    pub fn get_strategy_names(&self) -> Vec<String> {
-        self.strategy_cache.keys().cloned().collect()
-    }
-
-    pub fn create_strategy_key(decks: u8,
-                               dealer_stands_on_soft_17: bool,
-                               double_after_split: bool,
-                               dealer_peak: bool,
-                               surrender_allowed: SurrenderRule) -> String {
-
-        // Format: "decks{d}_s17{s}_das{d}_peak{p}_surr{s}"
-        format!(
-            "decks{}_s17{}_das{}_peak{}_surr{}",
-            decks,
-            if dealer_stands_on_soft_17 { "y" } else { "n" },
-            if double_after_split { "y" } else { "n" },
-            if dealer_peak { "y" } else { "n" },
-            surrender_allowed.to_string(),
-        )
-    }
-
     pub fn update_strategy_based_on_settings(&mut self) {
         // Convert the UI settings to strategy variables
         let decks = self.number_of_decks as u8;
@@ -214,7 +189,7 @@ impl StrategyCalculatorScreen {
         let surrender_allowed =self.surrender_rule;
 
         // Find an exact matching strategy
-        if let Some((name, matching_strategy)) = Self::find_matching_strategy(
+        if let Some((name, _)) = Self::find_matching_strategy(
             &self.strategy_cache,
             decks,
             dealer_stands_on_soft_17,
@@ -228,15 +203,6 @@ impl StrategyCalculatorScreen {
             if self.strategy_cache.contains_key("default-strategy.json") {
                 self.switch_strategy("default-strategy");
             }
-
-            // You might want to log this missing combination for future strategy creation:
-            let key = Self::create_strategy_key(
-                decks,
-                dealer_stands_on_soft_17,
-                double_after_split,
-                dealer_peak,
-                surrender_allowed
-            );
         }
     }
 

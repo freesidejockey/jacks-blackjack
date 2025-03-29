@@ -4,7 +4,7 @@ use ratatui::Frame;
 #[derive(PartialEq, Debug)]
 pub enum ModelResponse {
     /// Check for another update from the screen model
-    NoOp,
+    // NoOp,
     /// Run the ui function on the screen model
     Refresh,
     /// Exit the application

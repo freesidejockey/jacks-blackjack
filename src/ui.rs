@@ -8,8 +8,6 @@ use crate::constants::TITLE;
 // Constants for layout dimensions
 const HEADER_HEIGHT: u16 = 4;
 const FOOTER_HEIGHT: u16 = 4;
-const SIDE_MARGIN: u16 = 4;
-const SECTION_TITLE_HEIGHT: u16 = 10;
 
 /// Creates the main vertical layout: header, content, footer
 pub fn create_common_layout(area: Rect) -> Rc<[Rect]> {

@@ -4,7 +4,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
 use crate::constants::{ABOUT_US, ABOUT_US_TEXT};
 use crate::model::{Model, ModelResponse};
-use crate::ui::{render_border, render_centered_text, render_footer_spans, render_sub_title_block, render_title_block};
+use crate::ui::{render_border, render_centered_text, render_footer_spans};
 
 // ---- About Us Screen ----
 pub struct AboutUsScreen {

@@ -119,50 +119,6 @@ impl SurrenderRule {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PlayerAction {
-    Hit,
-    Stand,
-    DoubleOrHit,
-    DoubleOrStand,
-    Split,
-    SurrenderOrHit,
-    SurrenderOrStand,
-    SplitOrHit,
-}
-
-/// Helper methods to convert between action codes (as Strings) and PlayerActions
-impl PlayerAction {
-    /// Convert a string action code to a PlayerAction
-    pub fn from_code_string(code: &str) -> Result<Self, String> {
-        match code {
-            "H" => Ok(PlayerAction::Hit),
-            "S" => Ok(PlayerAction::Stand),
-            "D" => Ok(PlayerAction::DoubleOrHit),
-            "Ds" => Ok(PlayerAction::DoubleOrStand),
-            "P" => Ok(PlayerAction::Split),
-            "Su" => Ok(PlayerAction::SurrenderOrHit),
-            "Rs" => Ok(PlayerAction::SurrenderOrStand),
-            "Ph" => Ok(PlayerAction::SplitOrHit),
-            _ => Err(format!("Unknown action code: {}", code)),
-        }
-    }
-
-    /// Convert PlayerAction to a string action code
-    pub fn to_code_string(&self) -> &'static str {
-        match self {
-            PlayerAction::Hit => "H",
-            PlayerAction::Stand => "S",
-            PlayerAction::DoubleOrHit => "D",
-            PlayerAction::DoubleOrStand => "Ds",
-            PlayerAction::Split => "P",
-            PlayerAction::SurrenderOrHit => "Su",
-            PlayerAction::SurrenderOrStand => "Rs",
-            PlayerAction::SplitOrHit => "Ph",
-        }
-    }
-}
-
 impl BlackjackStrategy {
     /// Create a new BlackjackStrategy with default values
     pub fn new() -> Self {
@@ -200,38 +156,6 @@ impl BlackjackStrategy {
         let file_content = std::fs::read_to_string(path)?;
         let strategy = Self::from_json(&file_content)?;
         Ok(strategy)
-    }
-
-    pub fn get_hard_hand_action(&self, total: u8, dealer_upcard: u8) -> Result<PlayerAction, String> {
-        if !(5..=21).contains(&total) {
-            return Err(format!("Invalid hard hand total: {}", total));
-        }
-
-        if !(2..=11).contains(&dealer_upcard) {
-            return Err(format!("Invalid dealer upcard: {}", dealer_upcard));
-        }
-
-        // Find the matching row
-        let row = self.tables.hard_hands.iter()
-            .find(|row| row.total == total)
-            .ok_or_else(|| format!("No strategy for hard hand with total {}", total))?;
-
-        // Get the correct action based on dealer's upcard.
-        // Dealer's 2 maps to index 0. Dealers A maps to index 9.
-        let index = (dealer_upcard - 2) as usize;
-
-        let action_code = row.actions.get(index)
-            .ok_or_else(|| format!("Missing action for dealer upcard {} in hand total {}", dealer_upcard, total))?;
-
-        PlayerAction::from_code_string(action_code)
-    }
-
-    pub fn get_soft_hand_action(&self, total: u8, dealer_upcard: u8) -> Result<PlayerAction, String> {
-        Err("Not implemented".to_string())
-    }
-
-    pub fn get_pair_action(&self, single_card_value: u8, dealer_upcard: u8) -> Result<PlayerAction, String> {
-        Err("Not implemented".to_string())
     }
 }
 
@@ -331,59 +255,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_hard_hand_action() {
-        let json_str = r#"{
-            "id": "00000000-0000-0000-0000-000000000000",
-            "name": "Test Strategy",
-            "description": "Test Strategy",
-            "rules": {
-                "decks": 1,
-                "dealer_stands_on_soft_17": true,
-                "double_after_split": true,
-                "dealer_peak": true,
-                "surrender_allowed": "Not Allowed"
-            },
-            "tables": {
-                "hard_hands": [
-                    { "total": 10, "actions": ["D", "D", "D", "D", "D", "D", "D", "D", "H", "H"] },
-                    { "total": 16, "actions": ["S", "S", "S", "S", "S", "H", "H", "H", "H", "H"] }
-                ],
-                "soft_hands": [],
-                "pair_hands": []
-            },
-            "action_legend": {
-                "H": "Hit",
-                "S": "Stand",
-                "D": "Double if allowed, otherwise Hit"
-            }
-        }"#;
-
-        let strategy = BlackjackStrategy::from_json(json_str).unwrap();
-
-        // Test valid inputs
-        let action10vs2 = strategy.get_hard_hand_action(10, 2).unwrap();
-        assert_eq!(action10vs2, PlayerAction::DoubleOrHit);
-
-        let action16vs6 = strategy.get_hard_hand_action(16, 6).unwrap();
-        assert_eq!(action16vs6, PlayerAction::Stand);
-
-        let action16vs5 = strategy.get_hard_hand_action(16, 7).unwrap();
-        assert_eq!(action16vs5, PlayerAction::Hit);
-
-        // Test invalid hand total
-        let result = strategy.get_hard_hand_action(4, 2);
-        assert!(result.is_err());
-
-        // Test invalid dealer upcard
-        let result = strategy.get_hard_hand_action(10, 1);
-        assert!(result.is_err());
-
-        // Test dealer Ace (value 11)
-        let action10vsA = strategy.get_hard_hand_action(10, 11).unwrap();
-        assert_eq!(action10vsA, PlayerAction::Hit);
-    }
-
-    #[test]
     fn test_load_default_strategy() {
         // Assuming the default-strategy.json is in the root of your project
         // You may need to adjust the path based on your project structure
@@ -400,15 +271,6 @@ mod tests {
         assert_eq!(strategy.tables.hard_hands.len(), 17);
         assert_eq!(strategy.tables.soft_hands.len(), 9);
         assert_eq!(strategy.tables.pair_hands.len(), 10);
-
-        // Check a specific strategy recommendation
-        // Hard 16 vs Dealer 10 should be Hit (H)
-        let hard16_vs10 = strategy.get_hard_hand_action(16, 10).unwrap();
-        assert_eq!(hard16_vs10, PlayerAction::Hit);
-
-        // Hard 11 vs any card should be Double (D)
-        let hard11_vs7 = strategy.get_hard_hand_action(11, 7).unwrap();
-        assert_eq!(hard11_vs7, PlayerAction::DoubleOrHit);
 
         // Check that we can also retrieve the action legend
         assert_eq!(strategy.action_legend.len(), 8);
