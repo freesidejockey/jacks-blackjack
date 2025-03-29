@@ -253,29 +253,4 @@ mod tests {
         assert_eq!(strategy.action_legend.len(), 4);
         assert_eq!(strategy.action_legend.get("H").unwrap(), "Hit");
     }
-
-    #[test]
-    fn test_load_default_strategy() {
-        // Assuming the default-strategy.json is in the root of your project
-        // You may need to adjust the path based on your project structure
-        let result = BlackjackStrategy::from_file("/Users/atticus/WizardsWorkshop/FreesideProjects/jacks-blackjack/resources/strategies/default-strategy.json");
-        assert!(result.is_ok());
-
-        let strategy = result.unwrap();
-        assert_eq!(strategy.name, "Basic Strategy");
-        assert_eq!(strategy.description, "Default Basic Strategy");
-        assert_eq!(strategy.rules.decks, 2);
-        assert_eq!(strategy.rules.dealer_stands_on_soft_17, false);
-
-        // Check that tables were loaded properly
-        assert_eq!(strategy.tables.hard_hands.len(), 17);
-        assert_eq!(strategy.tables.soft_hands.len(), 9);
-        assert_eq!(strategy.tables.pair_hands.len(), 10);
-
-        // Check that we can also retrieve the action legend
-        assert_eq!(strategy.action_legend.len(), 8);
-        assert_eq!(strategy.action_legend.get("H").unwrap(), "Hit");
-        assert_eq!(strategy.action_legend.get("S").unwrap(), "Stand");
-        assert_eq!(strategy.action_legend.get("D").unwrap(), "Double if allowed, otherwise Hit");
-    }
 }

@@ -38,16 +38,6 @@ cd jacks-blackjack
 cargo run --release
 ```
 
-## Usage
-
-```bash
-# Run the application
-cargo run
-
-# Or after installation
-jacks-blackjack
-```
-
 ## Development
 
 ```bash
